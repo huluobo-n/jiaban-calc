@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>加班费计算器 - 工作日1.5 / 休息日2 / 法定假3 · 含2026法定假对照</title>
+  <meta name="description" content="免费加班费计算器：按月工资÷21.75折算日工资与时薪，支持工作日1.5倍、休息日2倍、法定休假日3倍多段合计。内嵌2026年放假安排对照。仅供参考，以劳动合同与当地规定为准。" />
+  <meta name="keywords" content="加班费计算器,加班费怎么算,21.75,法定节假日加班,休息日加班,工作日加班,2026放假安排" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://jiaban.hpn6.com/" />
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --card: #ffffff;
+      --text: #1a2332;
+      --muted: #5a6a7a;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --accent: #0d9488;
+      --warn: #b45309;
+      --good: #047857;
+      --bad: #b91c1c;
+      --shadow: 0 8px 24px rgba(26, 35, 50, 0.08);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(180deg, #eef3ff 0%, var(--bg) 220px);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 48px; }
+    header.hero { margin-bottom: 18px; }
+    header.hero h1 {
+      font-size: clamp(1.35rem, 4vw, 1.85rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.02em;
+    }
+    header.hero p.lead { margin: 0; color: var(--muted); font-size: 0.98rem; }
+    .disclaimer {
+      margin: 12px 0 0;
+      padding: 10px 12px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 10px;
+      color: var(--warn);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .stats-bar {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      margin: 14px 0 18px; font-size: 0.85rem; color: var(--muted);
+    }
+    .stats-bar span {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 999px; padding: 4px 12px;
+    }
+    .stats-bar strong { color: var(--text); }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 18px 18px 16px; margin-bottom: 16px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 1.05rem; }
+    .card h3 { margin: 16px 0 8px; font-size: 0.95rem; color: var(--muted); font-weight: 600; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px 14px;
+    }
+    .field label {
+      display: block; font-size: 0.86rem; color: var(--muted); margin-bottom: 4px;
+    }
+    .field input, .field select {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: 10px; font-size: 1rem; background: #fff; color: var(--text);
+    }
+    .field input:focus, .field select:focus {
+      outline: 2px solid rgba(37, 99, 235, 0.25); border-color: var(--primary);
+    }
+    .field .hint { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+    .seg-row {
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 10px;
+      padding: 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    @media (max-width: 640px) {
+      .seg-row { grid-template-columns: 1fr; }
+    }
+    .seg-row .rm {
+      padding: 10px 12px;
+      background: #fef2f2;
+      color: var(--bad);
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .seg-row .rm:hover { background: #fee2e2; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    button {
+      appearance: none; border: none; border-radius: 10px;
+      padding: 11px 16px; font-size: 0.95rem; cursor: pointer; font-weight: 600;
+    }
+    button.primary { background: var(--primary); color: #fff; flex: 1; min-width: 140px; }
+    button.primary:hover { background: var(--primary-hover); }
+    button.ghost { background: #f1f5f9; color: var(--text); }
+    button.ghost:hover { background: #e2e8f0; }
+    .error {
+      display: none; margin-top: 12px; padding: 10px 12px;
+      border-radius: 10px; background: #fef2f2; color: var(--bad); font-size: 0.92rem;
+    }
+    .error.show { display: block; }
+    .result-hidden { display: none; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .metric {
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px;
+    }
+    .metric .k { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    .metric .v { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .metric .v.good { color: var(--good); }
+    .highlight {
+      margin-top: 4px; padding: 14px; border-radius: 12px;
+      background: linear-gradient(135deg, #ecfdf5, #f0f9ff);
+      border: 1px solid #bbf7d0;
+    }
+    .highlight .sub { font-size: 0.85rem; color: var(--muted); }
+    .highlight .big { font-size: 1.6rem; font-weight: 800; color: var(--good); margin: 4px 0; }
+    table.rate, table.hol {
+      width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 8px;
+    }
+    table.rate th, table.rate td, table.hol th, table.hol td {
+      border: 1px solid var(--border); padding: 6px 8px; text-align: left;
+    }
+    table.rate th, table.hol th { background: #f8fafc; }
+    table.hol td.tag-3 { color: var(--bad); font-weight: 600; }
+    table.hol td.tag-2 { color: var(--warn); font-weight: 600; }
+    .note { font-size: 0.88rem; color: var(--muted); margin: 12px 0 0; }
+    details.faq, details.hol-box { border-top: 1px solid var(--border); padding: 10px 0; }
+    details.faq:first-of-type, details.hol-box:first-of-type { border-top: none; }
+    details.faq summary, details.hol-box summary { cursor: pointer; font-weight: 600; }
+    details.faq p { margin: 8px 0 0; color: var(--muted); font-size: 0.92rem; }
+    details.hol-box { border-top: none; padding: 0; }
+    details.hol-box summary {
+      list-style: none; padding: 4px 0 8px; color: var(--primary);
+    }
+    details.hol-box summary::-webkit-details-marker { display: none; }
+    .copy-box {
+      margin-top: 12px; padding: 12px; background: #f8fafc;
+      border: 1px dashed var(--border); border-radius: 10px;
+      font-size: 0.88rem; white-space: pre-wrap; word-break: break-word;
+      color: var(--text); max-height: 220px; overflow: auto;
+    }
+    footer {
+      margin-top: 8px; text-align: center; color: var(--muted); font-size: 0.82rem;
+    }
+    .wage-mode {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+    }
+    .wage-mode label {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px;
+      background: #fff; font-size: 0.88rem; cursor: pointer; color: var(--muted);
+    }
+    .wage-mode input { accent-color: var(--primary); }
+    .wage-mode label.active {
+      border-color: var(--primary); color: var(--primary); background: #eff6ff; font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>加班费计算器</h1>
+      <p class="lead">工作日 1.5 倍 · 休息日 2 倍 · 法定休假日 3 倍 · 月计薪天数默认 21.75 · 含 2026 放假对照</p>
+      <p class="disclaimer">仅供参考，以劳动合同、单位制度与当地劳动监察口径为准。本页为估算工具，不构成法律意见。</p>
+      <div class="stats-bar" aria-label="本地使用统计">
+        <span>开始计算：<strong id="stat-start">0</strong></span>
+        <span>算出结果：<strong id="stat-done">0</strong></span>
+        <span>完成率：<strong id="stat-rate">—</strong></span>
+      </div>
+    </header>
+
+    <section class="card" aria-labelledby="wage-title">
+      <h2 id="wage-title">工资基准</h2>
+      <div class="wage-mode" role="radiogroup" aria-label="输入方式">
+        <label class="active" id="mode-label-month"><input type="radio" name="wageMode" value="month" checked /> 按月基本工资</label>
+        <label id="mode-label-day"><input type="radio" name="wageMode" value="day" /> 按日工资</label>
+        <label id="mode-label-hour"><input type="radio" name="wageMode" value="hour" /> 按时薪</label>
+      </div>
+      <div class="grid">
+        <div class="field" id="field-month">
+          <label for="monthWage">月基本工资（元）</label>
+          <input id="monthWage" type="number" min="0" step="0.01" value="10000" inputmode="decimal" />
+          <div class="hint">一般取劳动合同约定的基本工资，不含加班费本身</div>
+        </div>
+        <div class="field" id="field-day">
+          <label for="dayWage">日工资（元）</label>
+          <input id="dayWage" type="number" min="0" step="0.01" value="" inputmode="decimal" />
+          <div class="hint">默认 = 月工资 ÷ 月计薪天数</div>
+        </div>
+        <div class="field" id="field-hour">
+          <label for="hourWage">时薪（元）</label>
+          <input id="hourWage" type="number" min="0" step="0.01" value="" inputmode="decimal" />
+          <div class="hint">默认 = 日工资 ÷ 日标准工时</div>
+        </div>
+        <div class="field">
+          <label for="monthDays">月计薪天数（分母）</label>
+          <input id="monthDays" type="number" min="1" max="31" step="0.01" value="21.75" inputmode="decimal" />
+          <div class="hint">劳动法常用 21.75（年工作日 261÷12）；合同另有约定可改</div>
+        </div>
+        <div class="field">
+          <label for="dayHours">日标准工时（小时）</label>
+          <input id="dayHours" type="number" min="1" max="24" step="0.5" value="8" inputmode="decimal" />
+          <div class="hint">标准工时制多为 8；综合工时等请按单位规定改</div>
+        </div>
+      </div>
+      <p class="note" id="wagePreview">时薪预览：—</p>
+    </section>
+
+    <section class="card" aria-labelledby="ot-title">
+      <h2 id="ot-title">加班明细（可多段）</h2>
+      <p class="note" style="margin-top:0">倍数依据《劳动法》第四十四条常见口径：延长工作时间 ≥1.5；休息日工作且不能补休 ≥2；法定休假日工作 ≥3。休息日若已安排补休，实务中常不再支付 2 倍，请自行按单位规则选择。</p>
+      <div id="segments"></div>
+      <div class="actions">
+        <button type="button" class="ghost" id="btn-add">＋ 添加一段加班</button>
+        <button type="button" class="primary" id="btn-calc">计算加班费</button>
+        <button type="button" class="ghost" id="btn-reset">恢复示例</button>
+      </div>
+      <div class="error" id="error" role="alert"></div>
+    </section>
+
+    <section class="card result-hidden" id="result" aria-live="polite">
+      <h2>计算结果</h2>
+      <div class="highlight">
+        <div class="sub">合计加班费</div>
+        <div class="big" id="out-total">¥0.00</div>
+        <div class="sub" id="out-basis"></div>
+      </div>
+      <div class="metrics" style="margin-top:12px">
+        <div class="metric"><span class="k">折算日工资</span><span class="v" id="out-day">—</span></div>
+        <div class="metric"><span class="k">折算时薪</span><span class="v" id="out-hour">—</span></div>
+        <div class="metric"><span class="k">总加班小时</span><span class="v" id="out-hours">—</span></div>
+        <div class="metric"><span class="k">工作日 1.5× 小计</span><span class="v" id="out-w">—</span></div>
+        <div class="metric"><span class="k">休息日 2× 小计</span><span class="v" id="out-r">—</span></div>
+        <div class="metric"><span class="k">法定假 3× 小计</span><span class="v good" id="out-h">—</span></div>
+      </div>
+      <h3>分段明细</h3>
+      <div style="overflow-x:auto">
+        <table class="rate" aria-label="加班分段明细">
+          <thead>
+            <tr><th>#</th><th>类型</th><th>小时</th><th>倍数</th><th>金额</th></tr>
+          </thead>
+          <tbody id="out-rows"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button type="button" class="ghost" id="btn-copy">复制结果</button>
+      </div>
+      <div class="copy-box" id="copy-text" tabindex="0" aria-label="可复制的结果文本"></div>
+      <p class="note" id="copy-hint"></p>
+    </section>
+
+    <section class="card" aria-labelledby="hol-title">
+      <h2 id="hol-title">2026 年放假安排对照（可折叠）</h2>
+      <p class="note" style="margin-top:0">来源：国务院办公厅《关于2026年部分节假日安排的通知》（国办发明电〔2025〕7号，2025-11-04）。「法定节假日」核心日按《全国年节及纪念日放假办法》常见口径标注，便于区分 3 倍与 2 倍；调休上班日不算加班法定假。若与最新通知不一致，请以国务院最新通知为准。</p>
+      <details class="hol-box" open>
+        <summary>展开 / 收起对照表</summary>
+        <div style="overflow-x:auto">
+          <table class="hol" aria-label="2026放假对照">
+            <thead>
+              <tr>
+                <th>节日</th>
+                <th>放假调休区间</th>
+                <th>通常按 3 倍的法定假核心日</th>
+                <th>区间内其他休息日（多为 2 倍，若未补休）</th>
+                <th>调休上班</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>元旦</td>
+                <td>1月1日–3日（3天）</td>
+                <td class="tag-3">1月1日</td>
+                <td class="tag-2">1月2日–3日</td>
+                <td>1月4日（周日）上班</td>
+              </tr>
+              <tr>
+                <td>春节</td>
+                <td>2月15日–23日（9天）</td>
+                <td class="tag-3">2月16日–19日<br /><span style="font-weight:400;color:var(--muted)">（除夕至初三；农历以当年为准）</span></td>
+                <td class="tag-2">2月15日、2月20日–23日</td>
+                <td>2月14日、2月28日上班</td>
+              </tr>
+              <tr>
+                <td>清明节</td>
+                <td>4月4日–6日（3天）</td>
+                <td class="tag-3">4月4日</td>
+                <td class="tag-2">4月5日–6日</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>劳动节</td>
+                <td>5月1日–5日（5天）</td>
+                <td class="tag-3">5月1日–2日</td>
+                <td class="tag-2">5月3日–5日</td>
+                <td>5月9日（周六）上班</td>
+              </tr>
+              <tr>
+                <td>端午节</td>
+                <td>6月19日–21日（3天）</td>
+                <td class="tag-3">6月19日</td>
+                <td class="tag-2">6月20日–21日</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>中秋节</td>
+                <td>9月25日–27日（3天）</td>
+                <td class="tag-3">9月25日</td>
+                <td class="tag-2">9月26日–27日</td>
+                <td>9月20日（周日）上班<br /><span style="font-weight:400;color:var(--muted)">（国庆调休）</span></td>
+              </tr>
+              <tr>
+                <td>国庆节</td>
+                <td>10月1日–7日（7天）</td>
+                <td class="tag-3">10月1日–3日</td>
+                <td class="tag-2">10月4日–7日</td>
+                <td>9月20日、10月10日上班</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">春节「除夕至初三」日期按农历换算标注；若历法或通知有调整，请以国务院最新通知为准。综合计算工时、不定时工时等特殊工时制不适用上述简单倍数时，请咨询单位或当地劳动部门。</p>
+      </details>
+    </section>
+
+    <section class="card" aria-labelledby="faq-title">
+      <h2 id="faq-title">常见问题</h2>
+      <details class="faq">
+        <summary>为什么用 21.75？</summary>
+        <p>月计薪天数 21.75 =（365天 − 104个公休日）÷ 12，是折算日工资、加班费的常用公开口径。若劳动合同或集体合同另有约定，以约定为准。</p>
+      </details>
+      <details class="faq">
+        <summary>休息日加班一定拿 2 倍吗？</summary>
+        <p>《劳动法》规定休息日安排工作又不能安排补休的，支付不低于工资 200% 的工资报酬。若已安排补休，实务中常不再支付 2 倍加班费。</p>
+      </details>
+      <details class="faq">
+        <summary>法定假和「放假调休」有啥区别？</summary>
+        <p>法定节假日核心日加班一般按 ≥3 倍；连休里通过调休挪过来的休息日，通常按休息日规则（补休或 2 倍）。上表把两者分开标了，方便你对照打卡日期选类型。</p>
+      </details>
+      <details class="faq">
+        <summary>基本工资怎么取？</summary>
+        <p>多数争议按劳动合同约定的基本工资或正常工作时间工资折算。绩效、津贴是否计入各地口径不一，请按工资条与当地规定处理。</p>
+      </details>
+    </section>
+
+    <footer>
+      仅供参考，以劳动合同与当地规定为准。数据仅在浏览器本地计算，不上传服务器。<br />
+      <!-- analytics: localStorage counters; swap later for Umami/Plausible -->
+    </footer>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+
+    var STORAGE_KEY = "jiaban_calc_stats_v1";
+    var TYPES = [
+      { id: "work", label: "工作日延长（1.5倍）", mult: 1.5 },
+      { id: "rest", label: "休息日（2倍，未补休）", mult: 2 },
+      { id: "holiday", label: "法定休假日（3倍）", mult: 3 }
+    ];
+
+    var syncing = false;
+    var segSeq = 0;
+
+    function loadStats() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return { start: 0, done: 0 };
+        var o = JSON.parse(raw);
+        return { start: Number(o.start) || 0, done: Number(o.done) || 0 };
+      } catch (e) {
+        return { start: 0, done: 0 };
+      }
+    }
+    function saveStats(s) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+    }
+    function renderStats() {
+      var s = loadStats();
+      document.getElementById("stat-start").textContent = String(s.start);
+      document.getElementById("stat-done").textContent = String(s.done);
+      document.getElementById("stat-rate").textContent =
+        s.start > 0 ? ((s.done / s.start) * 100).toFixed(1) + "%" : "—";
+    }
+    function bump(kind) {
+      var s = loadStats();
+      if (kind === "start") s.start += 1;
+      if (kind === "done") s.done += 1;
+      saveStats(s);
+      renderStats();
+      // // Umami: umami.track(kind === "start" ? "calc_start" : "calc_done");
+      // // Plausible: plausible(kind === "start" ? "Calc Start" : "Calc Done");
+    }
+    renderStats();
+
+    function money(n) {
+      if (!isFinite(n)) return "—";
+      var rounded = Math.round(n * 100) / 100;
+      return "¥" + rounded.toLocaleString("zh-CN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+    function num(id) {
+      var v = parseFloat(document.getElementById(id).value);
+      return isFinite(v) ? v : NaN;
+    }
+    function setError(msg) {
+      var el = document.getElementById("error");
+      if (msg) {
+        el.textContent = msg;
+        el.classList.add("show");
+      } else {
+        el.textContent = "";
+        el.classList.remove("show");
+      }
+    }
+    function wageMode() {
+      var checked = document.querySelector('input[name="wageMode"]:checked');
+      return checked ? checked.value : "month";
+    }
+    function updateModeLabels() {
+      var mode = wageMode();
+      ["month", "day", "hour"].forEach(function (m) {
+        var lab = document.getElementById("mode-label-" + m);
+        if (lab) lab.classList.toggle("active", mode === m);
+      });
+    }
+
+    function deriveWages(from) {
+      if (syncing) return;
+      syncing = true;
+      try {
+        var days = num("monthDays");
+        var hours = num("dayHours");
+        if (!(days > 0)) days = 21.75;
+        if (!(hours > 0)) hours = 8;
+        var mode = from || wageMode();
+        var month = num("monthWage");
+        var day = num("dayWage");
+        var hour = num("hourWage");
+
+        if (mode === "month" && isFinite(month) && month >= 0) {
+          day = month / days;
+          hour = day / hours;
+          document.getElementById("dayWage").value = round4(day);
+          document.getElementById("hourWage").value = round4(hour);
+        } else if (mode === "day" && isFinite(day) && day >= 0) {
+          month = day * days;
+          hour = day / hours;
+          document.getElementById("monthWage").value = round4(month);
+          document.getElementById("hourWage").value = round4(hour);
+        } else if (mode === "hour" && isFinite(hour) && hour >= 0) {
+          day = hour * hours;
+          month = day * days;
+          document.getElementById("dayWage").value = round4(day);
+          document.getElementById("monthWage").value = round4(month);
+        }
+
+        var h = num("hourWage");
+        var d = num("dayWage");
+        document.getElementById("wagePreview").textContent =
+          "时薪预览：" + (isFinite(h) ? money(h) + "/小时" : "—") +
+          "　｜　日工资：" + (isFinite(d) ? money(d) + "/天" : "—") +
+          "　（分母 " + days + " 天，日工时 " + hours + " 小时）";
+      } finally {
+        syncing = false;
+      }
+    }
+    function round4(n) {
+      return (Math.round(n * 10000) / 10000).toString();
+    }
+
+    function typeOptions(selected) {
+      return TYPES.map(function (t) {
+        return '<option value="' + t.id + '"' +
+          (t.id === selected ? " selected" : "") + ">" + t.label + "</option>";
+      }).join("");
+    }
+
+    function addSegment(preset) {
+      segSeq += 1;
+      var id = "seg-" + segSeq;
+      var type = (preset && preset.type) || "work";
+      var hours = (preset && preset.hours != null) ? preset.hours : 2;
+      var wrap = document.createElement("div");
+      wrap.className = "seg-row";
+      wrap.dataset.id = id;
+      wrap.innerHTML =
+        '<div class="field">' +
+          '<label for="' + id + '-type">加班类型</label>' +
+          '<select id="' + id + '-type">' + typeOptions(type) + "</select>" +
+        "</div>" +
+        '<div class="field">' +
+          '<label for="' + id + '-hours">小时数</label>' +
+          '<input id="' + id + '-hours" type="number" min="0" step="0.5" value="' + hours + '" inputmode="decimal" />' +
+        "</div>" +
+        '<button type="button" class="rm" data-rm="' + id + '" aria-label="删除此段">删除</button>';
+      document.getElementById("segments").appendChild(wrap);
+      wrap.querySelector("[data-rm]").addEventListener("click", function () {
+        var rows = document.querySelectorAll("#segments .seg-row");
+        if (rows.length <= 1) {
+          setError("至少保留一段加班记录。");
+          return;
+        }
+        setError("");
+        wrap.remove();
+      });
+    }
+
+    function readSegments() {
+      var rows = document.querySelectorAll("#segments .seg-row");
+      var list = [];
+      rows.forEach(function (row) {
+        var id = row.dataset.id;
+        var typeId = document.getElementById(id + "-type").value;
+        var hours = parseFloat(document.getElementById(id + "-hours").value);
+        var meta = TYPES.filter(function (t) { return t.id === typeId; })[0] || TYPES[0];
+        list.push({ typeId: meta.id, label: meta.label, mult: meta.mult, hours: hours });
+      });
+      return list;
+    }
+
+    function calc() {
+      bump("start");
+      setError("");
+      deriveWages(wageMode());
+
+      var hourWage = num("hourWage");
+      var dayWage = num("dayWage");
+      var days = num("monthDays");
+      var dayHours = num("dayHours");
+      if (!(hourWage >= 0) || !isFinite(hourWage)) {
+        setError("请填写有效的工资或时薪。");
+        return;
+      }
+      if (!(days > 0) || !(dayHours > 0)) {
+        setError("月计薪天数与日标准工时须大于 0。");
+        return;
+      }
+
+      var segs = readSegments();
+      if (!segs.length) {
+        setError("请至少添加一段加班。");
+        return;
+      }
+      for (var i = 0; i < segs.length; i++) {
+        if (!(segs[i].hours > 0) || !isFinite(segs[i].hours)) {
+          setError("第 " + (i + 1) + " 段小时数须大于 0。");
+          return;
+        }
+      }
+
+      var total = 0;
+      var totalHours = 0;
+      var sumW = 0, sumR = 0, sumH = 0;
+      var tbody = document.getElementById("out-rows");
+      tbody.innerHTML = "";
+      var lines = [];
+
+      segs.forEach(function (s, idx) {
+        var amt = hourWage * s.mult * s.hours;
+        total += amt;
+        totalHours += s.hours;
+        if (s.typeId === "work") sumW += amt;
+        else if (s.typeId === "rest") sumR += amt;
+        else sumH += amt;
+
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          "<td>" + (idx + 1) + "</td>" +
+          "<td>" + s.label + "</td>" +
+          "<td>" + s.hours + "</td>" +
+          "<td>" + s.mult + "×</td>" +
+          "<td>" + money(amt) + "</td>";
+        tbody.appendChild(tr);
+        lines.push(
+          (idx + 1) + ". " + s.label + " · " + s.hours + " 小时 × " +
+          money(hourWage) + " × " + s.mult + " = " + money(amt)
+        );
+      });
+
+      document.getElementById("out-total").textContent = money(total);
+      document.getElementById("out-basis").textContent =
+        "时薪 " + money(hourWage) + " = 日工资 " + money(dayWage) +
+        " ÷ " + dayHours + "（月计薪 " + days + " 天）";
+      document.getElementById("out-day").textContent = money(dayWage);
+      document.getElementById("out-hour").textContent = money(hourWage);
+      document.getElementById("out-hours").textContent = String(
+        Math.round(totalHours * 100) / 100
+      );
+      document.getElementById("out-w").textContent = money(sumW);
+      document.getElementById("out-r").textContent = money(sumR);
+      document.getElementById("out-h").textContent = money(sumH);
+
+      var copy =
+        "【加班费估算】\n" +
+        "时薪：" + money(hourWage) + "（日工资 " + money(dayWage) +
+        "，月计薪天数 " + days + "，日工时 " + dayHours + "）\n" +
+        lines.join("\n") + "\n" +
+        "合计加班费：" + money(total) + "\n" +
+        "（仅供参考，以劳动合同与当地规定为准）";
+      document.getElementById("copy-text").textContent = copy;
+      document.getElementById("copy-hint").textContent = "";
+      document.getElementById("result").classList.remove("result-hidden");
+      bump("done");
+      document.getElementById("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function resetExample() {
+      document.querySelector('input[name="wageMode"][value="month"]').checked = true;
+      updateModeLabels();
+      document.getElementById("monthWage").value = "10000";
+      document.getElementById("monthDays").value = "21.75";
+      document.getElementById("dayHours").value = "8";
+      document.getElementById("segments").innerHTML = "";
+      segSeq = 0;
+      addSegment({ type: "work", hours: 2 });
+      addSegment({ type: "rest", hours: 8 });
+      addSegment({ type: "holiday", hours: 8 });
+      deriveWages("month");
+      setError("");
+      document.getElementById("result").classList.add("result-hidden");
+    }
+
+    document.getElementById("btn-add").addEventListener("click", function () {
+      addSegment({ type: "work", hours: 1 });
+    });
+    document.getElementById("btn-calc").addEventListener("click", calc);
+    document.getElementById("btn-reset").addEventListener("click", resetExample);
+    document.getElementById("btn-copy").addEventListener("click", function () {
+      var text = document.getElementById("copy-text").textContent;
+      var hint = document.getElementById("copy-hint");
+      function ok() { hint.textContent = "已复制到剪贴板。"; }
+      function fail() {
+        hint.textContent = "复制失败，请手动选中上方文本复制。";
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(ok).catch(fail);
+      } else {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          ok();
+        } catch (e) { fail(); }
+      }
+    });
+
+    document.querySelectorAll('input[name="wageMode"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        updateModeLabels();
+        deriveWages(wageMode());
+      });
+    });
+    ["monthWage", "dayWage", "hourWage", "monthDays", "dayHours"].forEach(function (id) {
+      document.getElementById(id).addEventListener("input", function () {
+        var map = { monthWage: "month", dayWage: "day", hourWage: "hour" };
+        var from = map[id] || wageMode();
+        if (id === "monthDays" || id === "dayHours") from = wageMode();
+        deriveWages(from);
+      });
+    });
+
+    resetExample();
+  })();
+  </script>
+</body>
+</html>
